@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pgAdmin Web Viewer - Supabase Integration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 1rem 2rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo {
+            width: 40px;
+            height: 40px;
+            background: #3b82f6;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            gap: 1rem;
+            padding: 1rem;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+        }
+
+        .main-content {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .connection-form {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .connection-status {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .status-disconnected {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        .status-connected {
+            background: #dcfce7;
+            color: #16a34a;
+            border: 1px solid #bbf7d0;
+        }
+
+        .database-tree {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .tree-item {
+            padding: 0.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background-color 0.2s ease;
+        }
+
+        .tree-item:hover {
+            background: #f1f5f9;
+        }
+
+        .tree-item.selected {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .tree-icon {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+
+        .query-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .query-editor {
+            width: 100%;
+            height: 200px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            padding: 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            resize: vertical;
+            background: #f8fafc;
+        }
+
+        .query-editor:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: white;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .results-table th {
+            background: #f8fafc;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .results-table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .results-table tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        .tab-container {
+            display: flex;
+            border-bottom: 2px solid #e5e7eb;
+            margin-bottom: 1rem;
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            font-weight: 600;
+            color: #6b7280;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+        }
+
+        .tab:hover {
+            background: #f8fafc;
+        }
+
+        .info-card {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .info-card h3 {
+            color: #1e40af;
+            margin-bottom: 0.5rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #6b7280;
+        }
+
+        .spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                max-height: 300px;
+            }
+            
+            .header {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">DB</div>
+        <h1>pgAdmin Web Viewer - Supabase Integration</h1>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <div class="connection-form">
+                <h3 style="margin-bottom: 1rem; color: #374151;">Configuración de Conexión</h3>
+                
+                <div class="form-group">
+                    <label for="host">Host/Servidor</label>
+                    <input type="text" id="host" placeholder="db.supabase.co" value="db.ejemplo.supabase.co">
+                </div>
+                
+                <div class="form-group">
+                    <label for="port">Puerto</label>
+                    <input type="number" id="port" value="5432">
+                </div>
+                
+                <div class="form-group">
+                    <label for="database">Base de Datos</label>
+                    <input type="text" id="database" placeholder="postgres" value="postgres">
+                </div>
+                
+                <div class="form-group">
+                    <label for="username">Usuario</label>
+                    <input type="text" id="username" placeholder="postgres" value="postgres">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Contraseña</label>
+                    <input type="password" id="password" placeholder="Tu contraseña de Supabase">
+                </div>
+                
+                <button class="btn btn-primary" onclick="connectToDatabase()" id="connectBtn">
+                    Conectar a Supabase
+                </button>
+            </div>
+
+            <div class="connection-status status-disconnected" id="connectionStatus">
+                Desconectado
+            </div>
+
+            <div class="database-tree" id="databaseTree">
+                <div class="info-card">
+                    <h4>Conéctate para ver la estructura</h4>
+                    <p>Ingresa tus credenciales de Supabase y conecta para explorar las tablas y esquemas.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="tab-container">
+                <div class="tab active" onclick="switchTab('query')">Consulta SQL</div>
+                <div class="tab" onclick="switchTab('results')">Resultados</div>
+                <div class="tab" onclick="switchTab('info')">Información</div>
+            </div>
+
+            <div id="queryTab" class="query-section">
+                <textarea class="query-editor" id="queryEditor" placeholder="-- Escribe tu consulta SQL aquí
+-- Ejemplo:
+SELECT * FROM usuarios LIMIT 10;
+
+-- O crear una tabla:
+CREATE TABLE ejemplo (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(100),
+    email VARCHAR(255),
+    fecha_creacion TIMESTAMP DEFAULT NOW()
+);">-- Ejemplo de consultas SQL para Supabase
+SELECT * FROM auth.users LIMIT 5;
+
+-- Ver todas las tablas
+SELECT table_name 
+FROM information_schema.tables 
+WHERE table_schema = 'public';
+
+-- Consulta personalizada
+SELECT 
+    schemaname,
+    tablename,
+    tableowner
+FROM pg_tables 
+WHERE schemaname = 'public';</textarea>
+
+                <div style="margin: 1rem 0; display: flex; gap: 1rem;">
+                    <button class="btn btn-success" onclick="executeQuery()">
+                        🚀 Ejecutar Consulta
+                    </button>
+                    <button class="btn btn-primary" onclick="clearQuery()">
+                        🗑️ Limpiar
+                    </button>
+                </div>
+
+                <div id="results">
+                    <div class="info-card">
+                        <h3>📊 Panel de Consultas SQL</h3>
+                        <p>Utiliza este editor para ejecutar consultas SQL en tu base de datos de Supabase. Las consultas se ejecutarán de forma simulada para demostración.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="resultsTab" style="display: none;">
+                <div class="info-card">
+                    <h3>📈 Resultados de Consultas</h3>
+                    <p>Aquí aparecerán los resultados de tus consultas SQL ejecutadas.</p>
+                </div>
+                <div id="queryResults"></div>
+            </div>
+
+            <div id="infoTab" style="display: none;">
+                <div class="info-card">
+                    <h3>ℹ️ Información de la Conexión</h3>
+                    <div id="connectionInfo">
+                        <p><strong>Estado:</strong> <span id="infoStatus">Desconectado</span></p>
+                        <p><strong>Servidor:</strong> <span id="infoHost">-</span></p>
+                        <p><strong>Base de Datos:</strong> <span id="infoDatabase">-</span></p>
+                        <p><strong>Usuario:</strong> <span id="infoUser">-</span></p>
+                        <p><strong>Versión PostgreSQL:</strong> <span id="infoVersion">13.3</span></p>
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <h3>🔧 Características de Supabase</h3>
+                    <ul style="margin-left: 2rem; margin-top: 1rem;">
+                        <li>PostgreSQL completo con extensiones</li>
+                        <li>Row Level Security (RLS) habilitado</li>
+                        <li>Triggers y funciones personalizadas</li>
+                        <li>APIs automáticas REST y GraphQL</li>
+                        <li>Realtime subscriptions</li>
+                        <li>Autenticación integrada</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isConnected = false;
+        let currentTab = 'query';
+
+        // Datos de ejemplo para simular resultados
+        const sampleData = {
+            users: [
+                { id: 1, name: 'Juan Pérez', email: 'juan@ejemplo.com', created_at: '2024-01-15' },
+                { id: 2, name: 'María García', email: 'maria@ejemplo.com', created_at: '2024-01-16' },
+                { id: 3, name: 'Carlos López', email: 'carlos@ejemplo.com', created_at: '2024-01-17' }
+            ],
+            tables: [
+                { table_name: 'usuarios', table_schema: 'public' },
+                { table_name: 'productos', table_schema: 'public' },
+                { table_name: 'pedidos', table_schema: 'public' },
+                { table_name: 'categorias', table_schema: 'public' }
+            ]
+        };
+
+        function connectToDatabase() {
+            const btn = document.getElementById('connectBtn');
+            const status = document.getElementById('connectionStatus');
+            const host = document.getElementById('host').value;
+            const database = document.getElementById('database').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (!host || !database || !username || !password) {
+                alert('Por favor completa todos los campos de conexión');
+                return;
+            }
+
+            // Simular proceso de conexión
+            btn.textContent = 'Conectando...';
+            btn.disabled = true;
+
+            setTimeout(() => {
+                isConnected = true;
+                status.textContent = `Conectado a ${host}`;
+                status.className = 'connection-status status-connected';
+                btn.textContent = 'Desconectar';
+                btn.disabled = false;
+                btn.onclick = disconnectFromDatabase;
+
+                // Actualizar información de conexión
+                updateConnectionInfo();
+                
+                // Mostrar estructura de base de datos
+                loadDatabaseStructure();
+            }, 2000);
+        }
+
+        function disconnectFromDatabase() {
+            const btn = document.getElementById('connectBtn');
+            const status = document.getElementById('connectionStatus');
+            
+            isConnected = false;
+            status.textContent = 'Desconectado';
+            status.className = 'connection-status status-disconnected';
+            btn.textContent = 'Conectar a Supabase';
+            btn.onclick = connectToDatabase;
+
+            // Limpiar estructura
+            document.getElementById('databaseTree').innerHTML = `
+                <div class="info-card">
+                    <h4>Conéctate para ver la estructura</h4>
+                    <p>Ingresa tus credenciales de Supabase y conecta para explorar las tablas y esquemas.</p>
+                </div>
+            `;
+
+            updateConnectionInfo();
+        }
+
+        function loadDatabaseStructure() {
+            const tree = document.getElementById('databaseTree');
+            tree.innerHTML = `
+                <h4 style="margin-bottom: 1rem; color: #374151;">Estructura de Base de Datos</h4>
+                <div class="tree-item" onclick="selectTreeItem(this)">
+                    <span class="tree-icon">🏛️</span>
+                    <span>postgres (Base de Datos)</span>
+                </div>
+                <div class="tree-item" onclick="selectTreeItem(this)" style="margin-left: 20px;">
+                    <span class="tree-icon">📁</span>
+                    <span>Esquemas</span>
+                </div>
+                <div class="tree-item" onclick="selectTreeItem(this)" style="margin-left: 40px;">
+                    <span class="tree-icon">🔧</span>
+                    <span>public</span>
+                </div>
+                <div class="tree-item" onclick="selectTreeItem(this)" style="margin-left: 60px;">
+                    <span class="tree-icon">🗃️</span>
+                    <span>Tablas</span>
+                </div>
+                <div class="tree-item" onclick="selectTreeItem(this)" style="margin-left: 80px;">
+                    <span class="tree-icon">📊</span>
+                    <span>usuarios</span>
+                </div>
+                <div class="tree-item" onclick="selectTreeItem(this)" style="margin-left: 80px;">
+                    <span class="tree-icon">📊</span>
+                    <span>productos</span>
+                </div>
+                <div class="tree-item" onclick="selectTreeItem(this)" style="margin-left: 80px;">
+                    <span class="tree-icon">📊</span>
+                    <span>pedidos</span>
+                </div>
+                <div class="tree-item" onclick="selectTreeItem(this)" style="margin-left: 40px;">
+                    <span class="tree-icon">🔑</span>
+                    <span>auth</span>
+                </div>
+                <div class="tree-item" onclick="selectTreeItem(this)" style="margin-left: 60px;">
+                    <span class="tree-icon">👥</span>
+                    <span>users</span>
+                </div>
+            `;
+        }
+
+        function selectTreeItem(item) {
+            // Remover selección previa
+            document.querySelectorAll('.tree-item').forEach(el => {
+                el.classList.remove('selected');
+            });
+            
+            // Agregar selección actual
+            item.classList.add('selected');
+        }
+
+        function executeQuery() {
+            if (!isConnected) {
+                alert('Debes conectarte primero a la base de datos');
+                return;
+            }
+
+            const query = document.getElementById('queryEditor').value.trim();
+            if (!query) {
+                alert('Ingresa una consulta SQL');
+                return;
+            }
+
+            const results = document.getElementById('results');
+            
+            // Mostrar loading
+            results.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Ejecutando consulta...</p>
+                </div>
+            `;
+
+            // Simular ejecución de consulta
+            setTimeout(() => {
+                let resultData;
+                let resultHtml;
+
+                // Simular diferentes tipos de consultas
+                if (query.toLowerCase().includes('select') && query.toLowerCase().includes('users')) {
+                    resultData = sampleData.users;
+                    resultHtml = generateTableHtml(resultData, ['id', 'name', 'email', 'created_at']);
+                } else if (query.toLowerCase().includes('information_schema.tables')) {
+                    resultData = sampleData.tables;
+                    resultHtml = generateTableHtml(resultData, ['table_name', 'table_schema']);
+                } else {
+                    resultHtml = `
+                        <div class="info-card">
+                            <h3>✅ Consulta Ejecutada</h3>
+                            <p><strong>Consulta:</strong></p>
+                            <pre style="background: #f8fafc; padding: 1rem; border-radius: 6px; margin: 1rem 0;">${query}</pre>
+                            <p><strong>Estado:</strong> Ejecutada correctamente (simulación)</p>
+                            <p><strong>Filas afectadas:</strong> ${Math.floor(Math.random() * 10) + 1}</p>
+                            <p><strong>Tiempo:</strong> ${Math.floor(Math.random() * 100) + 10}ms</p>
+                        </div>
+                    `;
+                }
+
+                results.innerHTML = resultHtml;
+
+                // También mostrar en la pestaña de resultados
+                document.getElementById('queryResults').innerHTML = resultHtml;
+            }, 1500);
+        }
+
+        function generateTableHtml(data, columns) {
+            if (!data || data.length === 0) {
+                return '<div class="info-card"><h3>Sin resultados</h3><p>La consulta no retornó datos.</p></div>';
+            }
+
+            let html = `
+                <div class="info-card">
+                    <h3>📋 Resultados de la Consulta</h3>
+                    <p>Se encontraron ${data.length} registros</p>
+                </div>
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            ${columns.map(col => `<th>${col}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            data.forEach(row => {
+                html += '<tr>';
+                columns.forEach(col => {
+                    html += `<td>${row[col] || '-'}</td>`;
+                });
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            return html;
+        }
+
+        function clearQuery() {
+            document.getElementById('queryEditor').value = '';
+            document.getElementById('results').innerHTML = `
+                <div class="info-card">
+                    <h3>📊 Panel de Consultas SQL</h3>
+                    <p>Utiliza este editor para ejecutar consultas SQL en tu base de datos de Supabase. Las consultas se ejecutarán de forma simulada para demostración.</p>
+                </div>
+            `;
+        }
+
+        function switchTab(tabName) {
+            // Actualizar pestañas
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Mostrar contenido correspondiente
+            document.getElementById('queryTab').style.display = 'none';
+            document.getElementById('resultsTab').style.display = 'none';
+            document.getElementById('infoTab').style.display = 'none';
+
+            document.getElementById(tabName + 'Tab').style.display = 'flex';
+            currentTab = tabName;
+        }
+
+        function updateConnectionInfo() {
+            const host = document.getElementById('host').value;
+            const database = document.getElementById('database').value;
+            const username = document.getElementById('username').value;
+
+            document.getElementById('infoStatus').textContent = isConnected ? 'Conectado' : 'Desconectado';
+            document.getElementById('infoHost').textContent = isConnected ? host : '-';
+            document.getElementById('infoDatabase').textContent = isConnected ? database : '-';
+            document.getElementById('infoUser').textContent = isConnected ? username : '-';
+        }
+
+        // Inicializar la interfaz
+        document.addEventListener('DOMContentLoaded', function() {
+            updateConnectionInfo();
+        });
+    </script>
+</body>
+</html>
