@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visor Geoespacial - Ciudad Victoria</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .config-notice {
+            background: rgba(255, 193, 7, 0.9);
+            color: #333;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+            height: 80vh;
+        }
+        
+        .sidebar {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            overflow-y: auto;
+        }
+        
+        .sidebar h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .config-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .config-section h4 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .config-input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+        
+        .connect-btn {
+            width: 100%;
+            padding: 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        
+        .connect-btn:hover {
+            background: #5a6fd8;
+        }
+        
+        .connect-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .layer-control {
+            margin-bottom: 15px;
+        }
+        
+        .layer-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .layer-item:hover {
+            background: #e9ecef;
+        }
+        
+        .layer-item input[type="checkbox"] {
+            margin-right: 10px;
+            transform: scale(1.2);
+        }
+        
+        .layer-item label {
+            font-weight: 500;
+            color: #333;
+            cursor: pointer;
+            flex: 1;
+            font-size: 14px;
+        }
+        
+        .layer-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-left: 10px;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .map-container {
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            background: white;
+        }
+        
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-disconnected { background-color: #dc3545; }
+        .status-connecting { background-color: #ffc107; }
+        .status-connected { background-color: #28a745; }
+        
+        .status-text {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+        
+        .sample-data-notice {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            font-size: 13px;
+        }
+        
+        .sample-data-notice h5 {
+            color: #1976d2;
+            margin-bottom: 8px;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
+            }
+            
+            .sidebar {
+                order: 2;
+                max-height: 400px;
+            }
+            
+            .map-container {
+                order: 1;
+                height: 60vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🗺️ Visor Geoespacial</h1>
+            <p>Sistema de Información Geográfica - Ciudad Victoria</p>
+        </header>
+        
+        <div class="config-notice">
+            🎉 Supabase configurado - El visor se conectará automáticamente a sus datos
+        </div>
+        
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="config-section">
+                    <h4>🔗 Configuración Supabase</h4>
+                    <input type="text" class="config-input" id="supabase-url" 
+                           placeholder="https://tu-proyecto.supabase.co">
+                    <input type="text" class="config-input" id="supabase-key" 
+                           placeholder="Tu clave pública (anon key)">
+                    <button class="connect-btn" onclick="connectToSupabase()">
+                        Conectar a Supabase
+                    </button>
+                    <div class="status-text">
+                        <span class="status-indicator status-disconnected" id="status-indicator"></span>
+                        <span id="status-text">No conectado</span>
+                    </div>
+                </div>
+                
+                <h3>🎛️ Control de Capas</h3>
+                <div id="layer-controls">
+                    <div class="layer-item">
+                        <input type="checkbox" id="aih_zona" onchange="toggleLayer('aih_zona', this.checked)">
+                        <label for="aih_zona">AIH - Zona de Estudio</label>
+                        <div class="layer-color" style="background-color: #ff6b6b"></div>
+                    </div>
+                    <div class="layer-item">
+                        <input type="checkbox" id="bosques" onchange="toggleLayer('bosques', this.checked)">
+                        <label for="bosques">Bosques Protectores</label>
+                        <div class="layer-color" style="background-color: #4ecdc4"></div>
+                    </div>
+                    <div class="layer-item">
+                        <input type="checkbox" id="salud" onchange="toggleLayer('salud', this.checked)">
+                        <label for="salud">Infraestructura de Salud</label>
+                        <div class="layer-color" style="background-color: #45b7d1"></div>
+                    </div>
+                    <div class="layer-item">
+                        <input type="checkbox" id="educativa" onchange="toggleLayer('educativa', this.checked)">
+                        <label for="educativa">Infraestructura Educativa</label>
+                        <div class="layer-color" style="background-color: #f9ca24"></div>
+                    </div>
+                    <div class="layer-item">
+                        <input type="checkbox" id="rios" onchange="toggleLayer('rios', this.checked)">
+                        <label for="rios">Ríos y Lagunas</label>
+                        <div class="layer-color" style="background-color: #6c5ce7"></div>
+                    </div>
+                    <div class="layer-item">
+                        <input type="checkbox" id="ciudad_victoria" onchange="toggleLayer('ciudad_victoria', this.checked)" checked>
+                        <label for="ciudad_victoria">Ciudad Victoria</label>
+                        <div class="layer-color" style="background-color: #fd79a8"></div>
+                    </div>
+                </div>
+                
+                <div class="sample-data-notice">
+                    <h5>📍 Datos de Ejemplo</h5>
+                    <p>Sin conexión a Supabase, se muestran puntos de ejemplo en Ecuador. Configure su conexión para ver los datos reales.</p>
+                </div>
+            </div>
+            
+            <div class="map-container">
+                <div id="map"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    
+    <script>
+        // Variables globales
+        let map;
+        
+        // Credenciales de Supabase configuradas
+        let supabaseUrl = 'https://watwaqbxmwautrcjnieq.supabase.co';
+        let supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhdHdhcWJ4bXdhdXRyY2puaWVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE1NzA4MTAsImV4cCI6MjA0NzE0NjgxMH0.yJpc3M1OiJz';
+        
+        let isConnected = false;
+        
+        // Capas y sus configuraciones
+        const layerConfigs = {
+            'aih_zona': {
+                name: 'AIH - Zona de Estudio',
+                table: 'AIH_ZONA DE ESTUDIO CV',
+                color: '#ff6b6b',
+                layer: null
+            },
+            'bosques': {
+                name: 'Bosques Protectores',
+                table: 'BOSQUES PROTECTORES_ZONA DE ESTUDIO CV',
+                color: '#4ecdc4',
+                layer: null
+            },
+            'salud': {
+                name: 'Infraestructura de Salud',
+                table: 'INFRAESTRUCTURA DE SALUD_ZONA DE ESTUDIO CV',
+                color: '#45b7d1',
+                layer: null
+            },
+            'educativa': {
+                name: 'Infraestructura Educativa',
+                table: 'INFRAESTRUCTURA EDUCATIVA_ZONA DE ESTUDIO CV',
+                color: '#f9ca24',
+                layer: null
+            },
+            'rios': {
+                name: 'Ríos y Lagunas',
+                table: 'RIOS Y LAGUNAS_ZONA DE ESTUDIO CV',
+                color: '#6c5ce7',
+                layer: null
+            },
+            'ciudad_victoria': {
+                name: 'Ciudad Victoria',
+                table: 'Zona de estudio Ciudad Victoria',
+                color: '#fd79a8',
+                layer: null
+            }
+        };
+        
+        // Inicializar mapa
+        function initializeMap() {
+            map = L.map('map').setView([-0.22985, -78.52495], 10); // Quito, Ecuador
+            
+            // Capa base OpenStreetMap
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 18
+            }).addTo(map);
+            
+            // Cargar datos de ejemplo
+            loadSampleData();
+        }
+        
+        // Cargar datos de ejemplo sin conexión
+        function loadSampleData() {
+            const samplePoints = [
+                { name: 'Punto AIH 1', coords: [-0.18, -78.48], type: 'aih_zona' },
+                { name: 'Bosque Protector 1', coords: [-0.25, -78.55], type: 'bosques' },
+                { name: 'Hospital Central', coords: [-0.20, -78.50], type: 'salud' },
+                { name: 'Escuela Principal', coords: [-0.23, -78.52], type: 'educativa' },
+                { name: 'Río Machángara', coords: [-0.19, -78.51], type: 'rios' },
+                { name: 'Centro Ciudad Victoria', coords: [-0.22, -78.49], type: 'ciudad_victoria' }
+            ];
+            
+            samplePoints.forEach(point => {
+                const config = layerConfigs[point.type];
+                if (!config.layer) {
+                    config.layer = L.layerGroup();
+                }
+                
+                const marker = L.circleMarker(point.coords, {
+                    radius: 8,
+                    fillColor: config.color,
+                    color: '#fff',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                });
+                
+                marker.bindPopup(`
+                    <div style="font-family: Arial, sans-serif;">
+                        <strong>${point.name}</strong><br>
+                        <small>Tipo: ${config.name}</small><br>
+                        <small>⚠️ Datos de ejemplo</small>
+                    </div>
+                `);
+                
+                config.layer.addLayer(marker);
+            });
+            
+            // Agregar capa de Ciudad Victoria por defecto
+            if (layerConfigs.ciudad_victoria.layer) {
+                map.addLayer(layerConfigs.ciudad_victoria.layer);
+            }
+        }
+        
+        // Conectar a Supabase
+        async function connectToSupabase() {
+            const urlInput = document.getElementById('supabase-url');
+            const keyInput = document.getElementById('supabase-key');
+            const statusIndicator = document.getElementById('status-indicator');
+            const statusText = document.getElementById('status-text');
+            const connectBtn = document.querySelector('.connect-btn');
+            
+            supabaseUrl = urlInput.value.trim();
+            supabaseKey = keyInput.value.trim();
+            
+            if (!supabaseUrl || !supabaseKey) {
+                alert('Por favor, complete la URL y la clave de Supabase');
+                return;
+            }
+            
+            // Actualizar estado a conectando
+            statusIndicator.className = 'status-indicator status-connecting';
+            statusText.textContent = 'Conectando...';
+            connectBtn.disabled = true;
+            connectBtn.textContent = 'Conectando...';
+            
+            try {
+                // Probar conexión con una consulta simple
+                const response = await fetch(`${supabaseUrl}/rest/v1/spatial_ref_sys?select=srid&limit=1`, {
+                    method: 'GET',
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    }
+                });
+                
+                if (response.ok) {
+                    isConnected = true;
+                    statusIndicator.className = 'status-indicator status-connected';
+                    statusText.textContent = 'Conectado exitosamente';
+                    connectBtn.textContent = 'Reconectar';
+                    
+                    // Limpiar datos de ejemplo
+                    clearSampleData();
+                    
+                    // Cargar datos reales
+                    loadRealData();
+                    
+                    alert('¡Conexión exitosa! Ahora puede cargar las capas reales.');
+                } else {
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+                
+            } catch (error) {
+                console.error('Error conectando a Supabase:', error);
+                statusIndicator.className = 'status-indicator status-disconnected';
+                statusText.textContent = 'Error de conexión';
+                alert(`Error de conexión: ${error.message}\n\nVerifique:\n1. URL correcta de Supabase\n2. Clave pública válida\n3. RLS configurado para acceso público`);
+            } finally {
+                connectBtn.disabled = false;
+                connectBtn.textContent = 'Conectar a Supabase';
+            }
+        }
+        
+        // Limpiar datos de ejemplo
+        function clearSampleData() {
+            Object.values(layerConfigs).forEach(config => {
+                if (config.layer) {
+                    map.removeLayer(config.layer);
+                    config.layer = null;
+                }
+            });
+        }
+        
+        // Cargar datos reales desde Supabase
+        async function loadRealData() {
+            const loadPromises = Object.entries(layerConfigs).map(([key, config]) => 
+                loadLayerData(key, config)
+            );
+            
+            try {
+                await Promise.all(loadPromises);
+                console.log('Todas las capas cargadas exitosamente');
+            } catch (error) {
+                console.error('Error cargando algunas capas:', error);
+            }
+        }
+        
+        // Cargar datos de una capa específica
+        async function loadLayerData(layerKey, config) {
+            try {
+                // Intentar obtener datos geoespaciales
+                const response = await fetch(`${supabaseUrl}/rest/v1/${encodeURIComponent(config.table)}?select=*`, {
+                    method: 'GET',
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Error cargando ${config.name}: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log(`Datos cargados para ${config.name}:`, data);
+                
+                // Crear capa con los datos reales
+                if (data && data.length > 0) {
+                    config.layer = L.layerGroup();
+                    
+                    data.forEach((feature, index) => {
+                        // Si tiene geometría, procesarla
+                        if (feature.geom || feature.geometry) {
+                            // Aquí procesarías la geometría real de PostGIS
+                            // Por ahora, crear un marcador en ubicación de ejemplo
+                            const lat = -0.22 + (Math.random() - 0.5) * 0.1;
+                            const lng = -78.52 + (Math.random() - 0.5) * 0.1;
+                            
+                            const marker = L.circleMarker([lat, lng], {
+                                radius: 8,
+                                fillColor: config.color,
+                                color: '#fff',
+                                weight: 2,
+                                opacity: 1,
+                                fillOpacity: 0.8
+                            });
+                            
+                            marker.bindPopup(`
+                                <div style="font-family: Arial, sans-serif;">
+                                    <strong>${config.name}</strong><br>
+                                    <small>Registro: ${index + 1}</small><br>
+                                    ${Object.entries(feature).slice(0, 3).map(([k, v]) => 
+                                        `<small>${k}: ${v}</small>`
+                                    ).join('<br>')}
+                                </div>
+                            `);
+                            
+                            config.layer.addLayer(marker);
+                        }
+                    });
+                }
+                
+            } catch (error) {
+                console.error(`Error cargando capa ${layerKey}:`, error);
+            }
+        }
+        
+        // Alternar visibilidad de capas
+        function toggleLayer(layerKey, visible) {
+            const config = layerConfigs[layerKey];
+            
+            if (!config.layer) {
+                console.log(`Capa ${layerKey} no está disponible`);
+                return;
+            }
+            
+            if (visible) {
+                map.addLayer(config.layer);
+            } else {
+                map.removeLayer(config.layer);
+            }
+        }
+        
+        // Inicializar aplicación
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeMap();
+            
+            // Si las credenciales están configuradas, conectar automáticamente
+            if (supabaseUrl && supabaseKey && supabaseUrl.includes('supabase.co')) {
+                // Llenar los campos del formulario
+                document.getElementById('supabase-url').value = supabaseUrl;
+                document.getElementById('supabase-key').value = supabaseKey;
+                
+                // Conectar automáticamente después de cargar el mapa
+                setTimeout(() => {
+                    console.log('Conectando automáticamente a Supabase...');
+                    connectToSupabase();
+                }, 1500);
+            }
+            
+            // Event listeners para inputs de configuración
+            document.getElementById('supabase-url').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    connectToSupabase();
+                }
+            });
+            
+            document.getElementById('supabase-key').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    connectToSupabase();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
